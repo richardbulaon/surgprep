@@ -57,6 +57,17 @@ app.get('/api/access', optionalAuth, (req, res) => {
     });
 });
 
+// Debug endpoint - check env vars are set (no values exposed)
+app.get('/api/debug/env', (req, res) => {
+    res.json({
+        STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY ? `set (${process.env.STRIPE_SECRET_KEY.substring(0,12)}...)` : 'MISSING',
+        STRIPE_PRICE_ID: process.env.STRIPE_PRICE_ID || 'MISSING',
+        BASE_URL: process.env.BASE_URL || 'MISSING',
+        NODE_ENV: process.env.NODE_ENV || 'MISSING',
+        JWT_SECRET: process.env.JWT_SECRET ? 'set' : 'MISSING',
+    });
+});
+
 // Serve the main app page (requires auth check on client side)
 app.get('/app.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'app.html'));
