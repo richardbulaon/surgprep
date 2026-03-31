@@ -26,6 +26,7 @@ function initTables() {
             subscription_status TEXT DEFAULT 'none',
             subscription_id TEXT,
             subscription_end_date TEXT,
+            trial_start TEXT,
             reset_token TEXT,
             reset_token_expires TEXT,
             created_at TEXT DEFAULT (datetime('now')),
@@ -36,6 +37,13 @@ function initTables() {
         CREATE INDEX IF NOT EXISTS idx_users_stripe_customer ON users(stripe_customer_id);
         CREATE INDEX IF NOT EXISTS idx_users_reset_token ON users(reset_token);
     `);
+
+    // Add trial_start column if upgrading from old schema
+    try {
+        db.exec(`ALTER TABLE users ADD COLUMN trial_start TEXT`);
+    } catch (e) {
+        // Column already exists — ignore
+    }
 }
 
 module.exports = { getDb };

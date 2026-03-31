@@ -34,10 +34,12 @@ router.post('/signup', async (req, res) => {
         const passwordHash = await bcrypt.hash(password, 12);
         const userId = uuidv4();
 
+        // Start 7-day free trial on signup
+        const trialStart = new Date().toISOString();
         db.prepare(`
-            INSERT INTO users (id, email, password_hash, name)
-            VALUES (?, ?, ?, ?)
-        `).run(userId, email.toLowerCase(), passwordHash, name || null);
+            INSERT INTO users (id, email, password_hash, name, subscription_status, trial_start)
+            VALUES (?, ?, ?, ?, 'trialing', ?)
+        `).run(userId, email.toLowerCase(), passwordHash, name || null, trialStart);
 
         const user = db.prepare('SELECT id, email, name, subscription_status FROM users WHERE id = ?').get(userId);
         const token = generateToken(user);

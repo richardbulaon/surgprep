@@ -40,14 +40,18 @@ app.use('/api/webhooks', require('./api/webhooks'));
 
 // ===== PROTECTED APP ROUTES =====
 // The main app files served from root directory but with auth check
-const { optionalAuth, hasActiveSubscription } = require('./middleware/auth');
+const { optionalAuth, hasActiveSubscription, getTrialDaysRemaining } = require('./middleware/auth');
 
 // API endpoint to check access level
 app.get('/api/access', optionalAuth, (req, res) => {
     const isSubscribed = hasActiveSubscription(req.user);
+    const trialDaysRemaining = getTrialDaysRemaining(req.user);
     res.json({
         loggedIn: !!req.user,
         subscribed: isSubscribed,
+        trial: req.user?.subscription_status === 'trialing',
+        trialDaysRemaining,
+        trialExpired: req.user?.subscription_status === 'trialing' && trialDaysRemaining <= 0,
         user: req.user ? {
             id: req.user.id,
             email: req.user.email,
