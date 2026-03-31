@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SurgPrep — Procedures</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        /* Paywall overlay */
+        .paywall-gate {
+            display: none;
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(10, 10, 15, 0.95);
+            z-index: 9999;
+            display: flex; align-items: center; justify-content: center;
+            padding: 20px;
+        }
+        .paywall-card {
+            background: #12121a; border: 2px solid #3b82f6;
+            border-radius: 16px; padding: 48px 36px;
+            max-width: 480px; width: 100%; text-align: center;
+            box-shadow: 0 0 60px rgba(59, 130, 246, 0.15);
+        }
+        .paywall-card h2 { font-size: 24px; font-weight: 800; margin-bottom: 12px; color: #e4e4e7; }
+        .paywall-card p { color: #a0a0b0; font-size: 16px; line-height: 1.6; margin-bottom: 24px; }
+        .paywall-price { font-size: 42px; font-weight: 800; color: #e4e4e7; margin-bottom: 4px; }
+        .paywall-period { color: #a0a0b0; font-size: 16px; margin-bottom: 28px; }
+        .paywall-btn {
+            display: inline-block; padding: 14px 40px;
+            background: #3b82f6; color: #fff; border: none;
+            border-radius: 10px; font-size: 16px; font-weight: 600;
+            cursor: pointer; text-decoration: none; transition: 0.2s;
+            font-family: 'Inter', sans-serif; width: 100%;
+        }
+        .paywall-btn:hover { background: #2563eb; }
+        .paywall-secondary {
+            display: block; margin-top: 16px;
+            color: #a0a0b0; font-size: 14px; text-decoration: none;
+        }
+        .paywall-secondary:hover { color: #e4e4e7; }
+
+        /* User header bar */
+        .user-bar {
+            position: fixed; top: 0; right: 0; left: 0; z-index: 50;
+            background: rgba(10, 10, 15, 0.9); backdrop-filter: blur(12px);
+            border-bottom: 1px solid #1e1e2e;
+            padding: 10px 20px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .user-bar-left { display: flex; align-items: center; gap: 8px; }
+        .user-bar-left .logo-icon { font-size: 20px; }
+        .user-bar-left .logo-text { font-size: 16px; font-weight: 700; color: #e4e4e7; }
+        .user-bar-right { display: flex; align-items: center; gap: 16px; }
+        .user-bar-right .user-email { color: #a0a0b0; font-size: 13px; }
+        .user-bar-right button {
+            background: none; border: 1px solid #1e1e2e; color: #a0a0b0;
+            padding: 6px 14px; border-radius: 6px; cursor: pointer;
+            font-size: 13px; font-family: 'Inter', sans-serif; transition: 0.2s;
+        }
+        .user-bar-right button:hover { border-color: #a0a0b0; color: #e4e4e7; }
+        .user-bar-right .manage-btn { color: #3b82f6; border-color: rgba(59,130,246,0.3); }
+
+        body.has-user-bar .container { padding-top: 56px; }
+        body.has-user-bar #header { margin-top: 10px; }
+
+        .loading-screen {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: #0a0a0f; z-index: 10000;
+            display: flex; align-items: center; justify-content: center;
+            color: #a0a0b0; font-family: 'Inter', sans-serif; font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-screen" id="loadingScreen">
+        <div>
+            <span style="font-size: 32px;">🔬</span>
+            <p style="margin-top: 12px;">Loading SurgPrep...</p>
+        </div>
+    </div>
+
+    <!-- Paywall overlay (shown if not subscribed) -->
+    <div class="paywall-gate" id="paywallGate" style="display: none;">
+        <div class="paywall-card">
+            <div style="font-size: 48px; margin-bottom: 16px;">🔬</div>
+            <h2>Unlock Full Access</h2>
+            <p>Get access to all 27+ procedures with complete instrument lists, surgeon preferences, OR photos, and scrub tech tips.</p>
+            <div class="paywall-price">$9.99</div>
+            <div class="paywall-period">per month · cancel anytime</div>
+            <button class="paywall-btn" id="subscribeBtn">Subscribe Now</button>
+            <a href="/" class="paywall-secondary">← Back to home</a>
+        </div>
+    </div>
+
+    <!-- User bar (shown when logged in) -->
+    <div class="user-bar" id="userBar" style="display: none;">
+        <div class="user-bar-left">
+            <span class="logo-icon">🔬</span>
+            <span class="logo-text">SurgPrep</span>
+        </div>
+        <div class="user-bar-right">
+            <span class="user-email" id="userEmail"></span>
+            <button class="manage-btn" id="manageBtn" style="display: none;">Manage</button>
+            <button id="logoutBtn">Log Out</button>
+        </div>
+    </div>
+
+    <script>
+    (async function() {
+        const loading = document.getElementById('loadingScreen');
+        const paywall = document.getElementById('paywallGate');
+        const userBar = document.getElementById('userBar');
+
+        try {
+            // Check if returning from Stripe checkout
+            const urlParams = new URLSearchParams(window.location.search);
+            const stripeSessionId = urlParams.get('session_id');
+
+            if (stripeSessionId) {
+                // Verify the checkout session and activate subscription
+                try {
+                    const verifyRes = await fetch('/api/stripe/verify-session', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ sessionId: stripeSessionId })
+                    });
+                    const verifyData = await verifyRes.json();
+                    if (verifyData.activated) {
+                        // Clean URL and reload
+                        window.history.replaceState({}, '', '/app.html');
+                    }
+                } catch (e) {
+                    console.error('Session verify failed:', e);
+                }
+            }
+
+            const res = await fetch('/api/access', { credentials: 'include' });
+            const data = await res.json();
+
+            loading.style.display = 'none';
+
+            if (!data.loggedIn) {
+                // Not logged in — redirect to signup
+                window.location.href = '/signup.html';
+                return;
+            }
+
+            // Show user bar
+            document.getElementById('userEmail').textContent = data.user.email;
+            userBar.style.display = 'flex';
+            document.body.classList.add('has-user-bar');
+
+            if (!data.subscribed) {
+                // Show paywall
+                paywall.style.display = 'flex';
+
+                document.getElementById('subscribeBtn').addEventListener('click', async () => {
+                    const btn = document.getElementById('subscribeBtn');
+                    btn.textContent = 'Redirecting to checkout...';
+                    btn.disabled = true;
+                    try {
+                        const r = await fetch('/api/stripe/create-checkout-session', {
+                            method: 'POST',
+                            credentials: 'include',
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                        const d = await r.json();
+                        if (d.url) {
+                            window.location.href = d.url;
+                        } else {
+                            throw new Error('No checkout URL returned');
+                        }
+                    } catch (err) {
+                        alert('Could not start checkout: ' + err.message);
+                        btn.textContent = 'Subscribe Now';
+                        btn.disabled = false;
+                    }
+                });
+                return;
+            }
+
+            // Subscribed — show manage button
+            document.getElementById('manageBtn').style.display = 'inline-block';
+            document.getElementById('manageBtn').addEventListener('click', async () => {
+                try {
+                    const r = await fetch('/api/stripe/create-portal-session', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    const d = await r.json();
+                    if (d.url) window.location.href = d.url;
+                } catch (err) {
+                    alert('Could not open billing portal');
+                }
+            });
+
+            // Load the actual app
+            const appScript = document.createElement('script');
+            appScript.src = '/app.js';
+            document.body.appendChild(appScript);
+
+        } catch (err) {
+            loading.style.display = 'none';
+            window.location.href = '/login.html';
+        }
+
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+            window.location.href = '/';
+        });
+    })();
+    </script>
+</body>
+</html>

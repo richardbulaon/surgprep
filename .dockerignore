@@ -1,0 +1,6 @@
+node_modules
+surgprep.db
+surgprep.db-shm
+surgprep.db-wal
+.env
+.netlify

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Log In — SurgPrep</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/landing.css">
+</head>
+<body>
+    <div class="auth-page">
+        <div class="auth-card">
+            <a href="/" class="nav-logo" style="justify-content: center; margin-bottom: 24px; text-decoration: none; display: flex; align-items: center; gap: 8px;">
+                <span class="logo-icon">🔬</span>
+                <span class="logo-text">SurgPrep</span>
+            </a>
+            <h1>Welcome back</h1>
+            <p class="auth-subtitle">Log in to access your procedures</p>
+
+            <div class="auth-error" id="authError"></div>
+
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" placeholder="you@example.com" required autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" placeholder="Your password" required autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn-primary btn-full" id="submitBtn">Log In</button>
+            </form>
+
+            <div class="auth-links">
+                <a href="/forgot-password.html">Forgot your password?</a>
+            </div>
+            <div class="auth-links">
+                <a href="/signup.html">Don't have an account? Sign up</a>
+            </div>
+            <div class="auth-back">
+                <a href="/">← Back to home</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            const errorEl = document.getElementById('authError');
+            errorEl.style.display = 'none';
+            btn.textContent = 'Logging in...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        email: document.getElementById('email').value.trim().toLowerCase(),
+                        password: document.getElementById('password').value,
+                    })
+                });
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Login failed');
+
+                window.location.href = '/app.html';
+            } catch (err) {
+                errorEl.textContent = err.message;
+                errorEl.style.display = 'block';
+                btn.textContent = 'Log In';
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

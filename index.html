@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SurgPrep — Your OR Reference</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">
+                <span class="logo-icon">🔬</span>
+                <h1>SurgPrep</h1>
+            </div>
+            <p class="tagline">Your OR Reference, Built by Surgical Techs</p>
+        </div>
+    </header>
+
+    <main>
+        <!-- Search Section -->
+        <section class="search-section">
+            <div class="search-container">
+                <input type="text" id="searchInput" placeholder="Search procedures..." autocomplete="off">
+                <span class="search-icon">🔍</span>
+            </div>
+            <div class="filter-tags" id="filterTags">
+                <button class="filter-tag active" data-filter="all">All</button>
+                <button class="filter-tag" data-filter="ENT">ENT</button>
+                <button class="filter-tag" data-filter="General">General</button>
+                <button class="filter-tag" data-filter="Urology">Urology</button>
+                <button class="filter-tag" data-filter="Vascular">Vascular</button>
+                <button class="filter-tag" data-filter="Ortho">Ortho</button>
+            </div>
+        </section>
+
+        <!-- Procedure List -->
+        <section class="procedure-list" id="procedureList">
+            <!-- Populated by JS -->
+        </section>
+
+        <!-- Procedure Detail View -->
+        <section class="procedure-detail" id="procedureDetail" style="display:none;">
+            <button class="back-btn" id="backBtn">← Back to Procedures</button>
+            <div id="procedureContent">
+                <!-- Populated by JS -->
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="about-creator">
+            <p class="creator-text">Created by a 16-year ENT surgical technologist and active preceptor at a Level 1 academic medical center in Los Angeles. Built from real OR experience — not a textbook.</p>
+        </div>
+        <p>Built by surgical techs, for surgical techs. © 2026 SurgPrep</p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
