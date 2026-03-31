@@ -29,22 +29,22 @@ Every detail of this setup — instruments, tray pulls, surgeon preferences, ste
 **Attach:** `images/fess-wrobel/mayo-stand-sinus-instruments.jpg`
 
 **Caption (Reddit/Facebook):**
-FESS back table — Toriumi rhinoplasty tray, ESS tray, giraffe tray, cottonoids, and everything you need.
+ESS (Endoscopic Sinus Surgery) back table — Toriumi rhinoplasty tray, ESS tray, giraffe tray, cottonoids, and everything you need.
 
-Here's the tip that trips up every new tech: For FESS with Dr. Wrobel, you need the TORIUMI RHINOPLASTY tray — NOT the septoplasty tray. All your speculums come from the rhinoplasty tray.
+Here's the tip that trips up every new tech: For ESS (Endoscopic Sinus Surgery) with Dr. Wrobel, you need the TORIUMI RHINOPLASTY tray — NOT the septoplasty tray. All your speculums come from the rhinoplasty tray.
 
 I spent 16 years learning stuff like this the hard way. Now it's all in SurgPrep — 27+ procedures with real OR photos, real instrument lists, real surgeon preferences.
 
 https://surgprep.onrender.com
 
 **Instagram Caption:**
-Pop quiz: Which tray has the speculums for FESS? 🤔
+Pop quiz: Which tray has the speculums for ESS (Endoscopic Sinus Surgery)? 🤔
 
 If you said septoplasty — wrong. It's the Toriumi RHINOPLASTY tray.
 
 Stuff like this takes years to learn. Or you could check SurgPrep. Link in bio.
 
-#FESS #sinussurgery #surgicaltech #scrubtech #instrumentsetup #surgicaltechnology #ORlife #surgprep
+#ESS #endoscopicsinussurgery #sinussurgery #surgicaltech #scrubtech #instrumentsetup #surgicaltechnology #ORlife #surgprep
 
 ---
 
@@ -153,7 +153,7 @@ https://surgprep.onrender.com
 **Caption (Reddit/Facebook):**
 This is the Toriumi rhinoplasty tray. Gold-handled instruments = surgeon-grade.
 
-If you're scrubbing FESS and someone told you to get the "sinus tray" — this is what you actually need. Not the septoplasty tray. Not the "ENT tray." The TORIUMI.
+If you're scrubbing ESS (Endoscopic Sinus Surgery) and someone told you to get the "sinus tray" — this is what you actually need. Not the septoplasty tray. Not the "ENT tray." The TORIUMI.
 
 Your speculums, your cottle elevators, your freer — they all come from here.
 
@@ -166,11 +166,11 @@ https://surgprep.onrender.com
 **Instagram Caption:**
 Toriumi rhinoplasty tray — gold-handled instruments 🥇
 
-Scrubbing FESS? This is the tray you actually need. Not the septoplasty tray.
+Scrubbing ESS (Endoscopic Sinus Surgery)? This is the tray you actually need. Not the septoplasty tray.
 
 30 seconds in SurgPrep vs 3 months of learning the hard way. Link in bio.
 
-#toriumi #FESS #surgicalinstruments #surgicaltech #scrubtech #goldstandard #surgicaltechnology #surgprep
+#toriumi #ESS #endoscopicsinussurgery #surgicalinstruments #surgicaltech #scrubtech #goldstandard #surgicaltechnology #surgprep
 
 ---
 

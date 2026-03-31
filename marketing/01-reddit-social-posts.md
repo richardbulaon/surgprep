@@ -18,7 +18,7 @@ I've been scrubbing ENT/Head & Neck cases at a Level 1 academic medical center i
 **Tonsillectomy tip that saves you:**
 - When the case is finished, DO NOT throw your drapes away until the patient is EXTUBATED. Fold drapes down. Keep suction Bovie. Keep instruments STERILE — in case the tonsils start bleeding post-op. I've seen this save a case.
 
-**FESS setup tip:**
+**ESS (Endoscopic Sinus Surgery) setup tip:**
 - Get the TORIUMI RHINOPLASTY tray — NOT the septoplasty tray. All speculums come from the rhinoplasty tray. This trips up new techs constantly.
 
 I've been documenting all of this — every procedure I do, every surgeon preference, every tip and setup photo — into a reference app called [SurgPrep](https://surgprep.onrender.com). 27+ procedures, 74 OR photos, real instrument lists, real surgeon preferences. $9.99/mo. Built it because I got tired of watching new techs struggle with stuff that should be at their fingertips.
@@ -31,7 +31,7 @@ Happy to answer any questions about ENT cases, tricky setups, or anything OR-rel
 **Title:** Lead surgical tech, 16 years at a Level 1 academic center in LA. I scrub ENT, vascular, urology, general — AMA about OR setups, surgeon preferences, or case prep
 
 **Body:**
-Hey everyone. 16 years as a lead surgical tech at a Level 1 academic center in Los Angeles. My bread and butter is ENT/Head & Neck — free flap mandibulectomies, TORS (da Vinci robotic glossectomies), FESS, laryngectomies, temporal bone resections, parotidectomies — but I also scrub vascular (EVAR, fem-tib bypass), urology (radical cystectomy, robotic prostatectomy), and general (kidney transplant, organ procurement).
+Hey everyone. 16 years as a lead surgical tech at a Level 1 academic center in Los Angeles. My bread and butter is ENT/Head & Neck — free flap mandibulectomies, TORS (da Vinci robotic glossectomies), ESS (Endoscopic Sinus Surgery), laryngectomies, temporal bone resections, parotidectomies — but I also scrub vascular (EVAR, fem-tib bypass), urology (radical cystectomy, robotic prostatectomy), and general (kidney transplant, organ procurement).
 
 I've documented 27+ procedures with complete instrument lists, surgeon preferences, step-by-step flows, and OR photos into a reference called SurgPrep (https://surgprep.onrender.com) — but this AMA is free. Ask me anything about:
 
@@ -77,7 +77,7 @@ $9.99/mo, no contract. Would genuinely love feedback from other techs. What proc
 
 27+ procedures. 74 real OR photos. Complete instrument lists. Step-by-step flows. Stuff like:
 - "Dr. Sinha wants Matrix Mandible — not Synthes"
-- "Toriumi RHINOPLASTY tray for FESS — NOT the septoplasty tray"
+- "Toriumi RHINOPLASTY tray for ESS (Endoscopic Sinus Surgery) — NOT the septoplasty tray"
 - "ALWAYS open the SHIM for thyroplasty — forgetting it is a disaster"
 
 The kind of stuff that takes years to learn, or one bad case to wish you'd known.
