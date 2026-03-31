@@ -10,7 +10,6 @@
     <style>
         /* Paywall overlay */
         .paywall-gate {
-            display: none;
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(10, 10, 15, 0.95);
             z-index: 9999;
@@ -39,20 +38,16 @@
             display: block; margin-top: 16px;
             color: #a0a0b0; font-size: 14px; text-decoration: none;
         }
-        .paywall-secondary:hover { color: #e4e4e7; }
 
         /* User header bar */
         .user-bar {
-            position: fixed; top: 0; right: 0; left: 0; z-index: 50;
             background: rgba(10, 10, 15, 0.9); backdrop-filter: blur(12px);
             border-bottom: 1px solid #1e1e2e;
             padding: 10px 20px;
             display: flex; align-items: center; justify-content: space-between;
         }
         .user-bar-left { display: flex; align-items: center; gap: 8px; }
-        .user-bar-left .logo-icon { font-size: 20px; }
-        .user-bar-left .logo-text { font-size: 16px; font-weight: 700; color: #e4e4e7; }
-        .user-bar-right { display: flex; align-items: center; gap: 16px; }
+        .user-bar-right { display: flex; align-items: center; gap: 12px; }
         .user-bar-right .user-email { color: #a0a0b0; font-size: 13px; }
         .user-bar-right button {
             background: none; border: 1px solid #1e1e2e; color: #a0a0b0;
@@ -62,26 +57,22 @@
         .user-bar-right button:hover { border-color: #a0a0b0; color: #e4e4e7; }
         .user-bar-right .manage-btn { color: #3b82f6; border-color: rgba(59,130,246,0.3); }
 
-        body.has-user-bar .container { padding-top: 56px; }
-        body.has-user-bar #header { margin-top: 10px; }
-
         .loading-screen {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
             background: #0a0a0f; z-index: 10000;
             display: flex; align-items: center; justify-content: center;
             color: #a0a0b0; font-family: 'Inter', sans-serif; font-size: 16px;
+            flex-direction: column;
         }
     </style>
 </head>
 <body>
     <div class="loading-screen" id="loadingScreen">
-        <div>
-            <span style="font-size: 32px;">🔬</span>
-            <p style="margin-top: 12px;">Loading SurgPrep...</p>
-        </div>
+        <span style="font-size: 32px;">🔬</span>
+        <p style="margin-top: 12px;">Loading SurgPrep...</p>
     </div>
 
-    <!-- Paywall overlay (shown if not subscribed) -->
+    <!-- Paywall overlay (hidden by default, shown if not subscribed) -->
     <div class="paywall-gate" id="paywallGate" style="display: none;">
         <div class="paywall-card">
             <div style="font-size: 48px; margin-bottom: 16px;">🔬</div>
@@ -97,8 +88,8 @@
     <!-- User bar (shown when logged in) -->
     <div class="user-bar" id="userBar" style="display: none;">
         <div class="user-bar-left">
-            <span class="logo-icon">🔬</span>
-            <span class="logo-text">SurgPrep</span>
+            <span style="font-size: 20px;">🔬</span>
+            <span style="font-size: 16px; font-weight: 700; color: #e4e4e7;">SurgPrep</span>
         </div>
         <div class="user-bar-right">
             <span class="user-email" id="userEmail"></span>
@@ -107,11 +98,60 @@
         </div>
     </div>
 
+    <!-- App content (same structure as original index.html) -->
+    <div id="appContent" style="display: none;">
+        <header>
+            <div class="header-content">
+                <div class="logo">
+                    <span class="logo-icon">🔬</span>
+                    <h1>SurgPrep</h1>
+                </div>
+                <p class="tagline">Your OR Reference, Built by Surgical Techs</p>
+            </div>
+        </header>
+
+        <main>
+            <section class="search-section">
+                <div class="search-container">
+                    <input type="text" id="searchInput" placeholder="Search procedures..." autocomplete="off">
+                    <span class="search-icon">🔍</span>
+                </div>
+                <div class="filter-tags" id="filterTags">
+                    <button class="filter-tag active" data-filter="all">All</button>
+                    <button class="filter-tag" data-filter="ENT">ENT</button>
+                    <button class="filter-tag" data-filter="General">General</button>
+                    <button class="filter-tag" data-filter="Urology">Urology</button>
+                    <button class="filter-tag" data-filter="Vascular">Vascular</button>
+                    <button class="filter-tag" data-filter="Ortho">Ortho</button>
+                </div>
+            </section>
+
+            <section class="procedure-list" id="procedureList">
+                <!-- Populated by JS -->
+            </section>
+
+            <section class="procedure-detail" id="procedureDetail" style="display:none;">
+                <button class="back-btn" id="backBtn">← Back to Procedures</button>
+                <div id="procedureContent">
+                    <!-- Populated by JS -->
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <div class="about-creator">
+                <p class="creator-text">Created by a 16-year ENT surgical technologist and active preceptor at a Level 1 academic medical center in Los Angeles. Built from real OR experience — not a textbook.</p>
+            </div>
+            <p>Built by surgical techs, for surgical techs. © 2026 SurgPrep</p>
+        </footer>
+    </div>
+
     <script>
     (async function() {
         const loading = document.getElementById('loadingScreen');
         const paywall = document.getElementById('paywallGate');
         const userBar = document.getElementById('userBar');
+        const appContent = document.getElementById('appContent');
 
         try {
             // Check if returning from Stripe checkout
@@ -119,7 +159,6 @@
             const stripeSessionId = urlParams.get('session_id');
 
             if (stripeSessionId) {
-                // Verify the checkout session and activate subscription
                 try {
                     const verifyRes = await fetch('/api/stripe/verify-session', {
                         method: 'POST',
@@ -129,7 +168,6 @@
                     });
                     const verifyData = await verifyRes.json();
                     if (verifyData.activated) {
-                        // Clean URL and reload
                         window.history.replaceState({}, '', '/app.html');
                     }
                 } catch (e) {
@@ -143,7 +181,6 @@
             loading.style.display = 'none';
 
             if (!data.loggedIn) {
-                // Not logged in — redirect to signup
                 window.location.href = '/signup.html';
                 return;
             }
@@ -151,10 +188,8 @@
             // Show user bar
             document.getElementById('userEmail').textContent = data.user.email;
             userBar.style.display = 'flex';
-            document.body.classList.add('has-user-bar');
 
             if (!data.subscribed) {
-                // Show paywall
                 paywall.style.display = 'flex';
 
                 document.getElementById('subscribeBtn').addEventListener('click', async () => {
@@ -171,7 +206,7 @@
                         if (d.url) {
                             window.location.href = d.url;
                         } else {
-                            throw new Error('No checkout URL returned');
+                            throw new Error(d.error || 'No checkout URL');
                         }
                     } catch (err) {
                         alert('Could not start checkout: ' + err.message);
@@ -182,7 +217,10 @@
                 return;
             }
 
-            // Subscribed — show manage button
+            // SUBSCRIBED — show the app!
+            appContent.style.display = 'block';
+
+            // Show manage button
             document.getElementById('manageBtn').style.display = 'inline-block';
             document.getElementById('manageBtn').addEventListener('click', async () => {
                 try {
@@ -198,7 +236,7 @@
                 }
             });
 
-            // Load the actual app
+            // Load the app JS
             const appScript = document.createElement('script');
             appScript.src = '/app.js';
             document.body.appendChild(appScript);
