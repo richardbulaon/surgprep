@@ -98,6 +98,13 @@
         </div>
     </div>
 
+    <!-- Trial countdown banner -->
+    <div id="trialBanner" class="trial-banner" style="display: none;">
+        <span id="trialBannerText"></span>
+        <a href="#" id="trialSubscribeLink" class="trial-subscribe-link">Subscribe Now</a>
+        <button id="trialDismissBtn" class="trial-dismiss-btn">✕</button>
+    </div>
+
     <!-- App content (same structure as original index.html) -->
     <div id="appContent" style="display: none;">
         <header>
@@ -113,16 +120,40 @@
         <main>
             <section class="search-section">
                 <div class="search-container">
-                    <input type="text" id="searchInput" placeholder="Search procedures..." autocomplete="off">
+                    <input type="text" id="searchInput" placeholder="Search procedures, instruments, surgeons..." autocomplete="off">
                     <span class="search-icon">🔍</span>
                 </div>
                 <div class="filter-tags" id="filterTags">
                     <button class="filter-tag active" data-filter="all">All</button>
+                    <button class="filter-tag" data-filter="favorites" id="favoritesFilter" style="display:none;">⭐ Favorites</button>
                     <button class="filter-tag" data-filter="ENT">ENT</button>
                     <button class="filter-tag" data-filter="General">General</button>
                     <button class="filter-tag" data-filter="Urology">Urology</button>
                     <button class="filter-tag" data-filter="Vascular">Vascular</button>
                     <button class="filter-tag" data-filter="Ortho">Ortho</button>
+                </div>
+                <div class="search-actions">
+                    <button class="study-mode-btn" id="studyModeBtn">🧠 Study Mode</button>
+                </div>
+            </section>
+
+            <!-- Recently Viewed Section -->
+            <section class="recently-viewed-section" id="recentlyViewedSection" style="display:none;">
+                <div class="recently-viewed-header">
+                    <h3>📋 Recently Viewed</h3>
+                </div>
+                <div class="recently-viewed-scroll" id="recentlyViewedScroll">
+                    <!-- Populated by JS -->
+                </div>
+            </section>
+
+            <!-- Favorites Section -->
+            <section class="favorites-section" id="favoritesSection" style="display:none;">
+                <div class="favorites-header">
+                    <h3>⭐ Favorites</h3>
+                </div>
+                <div class="favorites-scroll" id="favoritesScroll">
+                    <!-- Populated by JS -->
                 </div>
             </section>
 
@@ -131,10 +162,46 @@
             </section>
 
             <section class="procedure-detail" id="procedureDetail" style="display:none;">
-                <button class="back-btn" id="backBtn">← Back to Procedures</button>
+                <div class="detail-top-bar">
+                    <button class="back-btn" id="backBtn">← Back to Procedures</button>
+                    <div class="detail-actions">
+                        <button class="detail-action-btn" id="checklistToggleBtn" title="Checklist Mode">☑️ Checklist</button>
+                        <button class="detail-action-btn" id="printBtn" title="Print">🖨️ Print</button>
+                    </div>
+                </div>
                 <div id="procedureContent">
                     <!-- Populated by JS -->
                 </div>
+            </section>
+
+            <!-- Quiz/Study Mode Section -->
+            <section class="quiz-section" id="quizSection" style="display:none;">
+                <button class="back-btn" id="quizBackBtn">← Back to Procedures</button>
+                <div class="quiz-header">
+                    <h2>🧠 Study Mode</h2>
+                    <p class="quiz-subtitle">Test your knowledge — flip the card to check your answer</p>
+                </div>
+                <div class="quiz-score" id="quizScore">
+                    <span id="quizCorrect">0</span> correct · <span id="quizTotal">0</span> total
+                </div>
+                <div class="quiz-card-container" id="quizCardContainer">
+                    <div class="quiz-card" id="quizCard">
+                        <div class="quiz-card-front" id="quizFront">
+                            <p class="quiz-category" id="quizCategory"></p>
+                            <h3 id="quizQuestion"></h3>
+                            <p class="quiz-hint">Tap to reveal answer</p>
+                        </div>
+                        <div class="quiz-card-back" id="quizBack">
+                            <p class="quiz-answer-label">Answer:</p>
+                            <div id="quizAnswer"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="quiz-controls">
+                    <button class="quiz-btn quiz-btn-wrong" id="quizWrongBtn">❌ Didn't Know</button>
+                    <button class="quiz-btn quiz-btn-right" id="quizRightBtn">✅ Got It</button>
+                </div>
+                <button class="quiz-btn quiz-btn-next" id="quizNextBtn">Next Card →</button>
             </section>
         </main>
 
@@ -142,8 +209,41 @@
             <div class="about-creator">
                 <p class="creator-text">Created by a 16-year ENT surgical technologist and active preceptor at a Level 1 academic medical center in Los Angeles. Built from real OR experience — not a textbook.</p>
             </div>
+            <div class="footer-actions">
+                <button class="request-procedure-btn" id="requestProcedureBtn">📝 Request a Procedure</button>
+            </div>
             <p>Built by surgical techs, for surgical techs. © 2026 SurgPrep</p>
         </footer>
+    </div>
+
+    <!-- Request Procedure Modal -->
+    <div class="modal-overlay" id="requestModal" style="display:none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>📝 Request a Procedure</h3>
+                <button class="modal-close" id="requestModalClose">✕</button>
+            </div>
+            <div class="modal-body">
+                <p>What procedure would you like added to SurgPrep?</p>
+                <input type="text" id="requestProcedureName" placeholder="Procedure name (e.g., Lap Cholecystectomy)" class="modal-input">
+                <textarea id="requestProcedureDetails" placeholder="Any specific details? (optional)" class="modal-textarea"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-submit-btn" id="requestSubmitBtn">Submit Request</button>
+            </div>
+            <div class="modal-message" id="requestMessage" style="display:none;"></div>
+        </div>
+    </div>
+
+    <!-- Image Lightbox -->
+    <div class="lightbox-overlay" id="lightboxOverlay" style="display:none;">
+        <button class="lightbox-close" id="lightboxClose">✕</button>
+        <button class="lightbox-nav lightbox-prev" id="lightboxPrev">‹</button>
+        <button class="lightbox-nav lightbox-next" id="lightboxNext">›</button>
+        <div class="lightbox-img-container">
+            <img id="lightboxImg" src="" alt="">
+        </div>
+        <p class="lightbox-caption" id="lightboxCaption"></p>
     </div>
 
     <script>
@@ -219,6 +319,35 @@
 
             // SUBSCRIBED — show the app!
             appContent.style.display = 'block';
+
+            // Trial countdown banner
+            if (data.trial && data.trialDaysRemaining > 0) {
+                const banner = document.getElementById('trialBanner');
+                const bannerText = document.getElementById('trialBannerText');
+                const dismissed = sessionStorage.getItem('trialBannerDismissed');
+                if (!dismissed) {
+                    banner.style.display = 'flex';
+                    bannerText.textContent = `Free trial: ${data.trialDaysRemaining} day${data.trialDaysRemaining !== 1 ? 's' : ''} remaining`;
+                    if (data.trialDaysRemaining <= 2) {
+                        banner.classList.add('trial-urgent');
+                    }
+                    document.getElementById('trialDismissBtn').addEventListener('click', () => {
+                        banner.style.display = 'none';
+                        sessionStorage.setItem('trialBannerDismissed', '1');
+                    });
+                    document.getElementById('trialSubscribeLink').addEventListener('click', async (e) => {
+                        e.preventDefault();
+                        try {
+                            const r = await fetch('/api/stripe/create-checkout-session', {
+                                method: 'POST', credentials: 'include',
+                                headers: { 'Content-Type': 'application/json' }
+                            });
+                            const d = await r.json();
+                            if (d.url) window.location.href = d.url;
+                        } catch (err) { alert('Could not start checkout'); }
+                    });
+                }
+            }
 
             // Show manage button
             document.getElementById('manageBtn').style.display = 'inline-block';

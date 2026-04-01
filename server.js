@@ -75,6 +75,29 @@ app.get('/styles.css', (req, res) => {
     res.sendFile(path.join(__dirname, 'styles.css'));
 });
 
+// ===== PROCEDURE REQUEST ENDPOINT =====
+app.post('/api/request-procedure', optionalAuth, (req, res) => {
+    const { procedureName, details } = req.body;
+    if (!procedureName || !procedureName.trim()) {
+        return res.status(400).json({ error: 'Procedure name is required' });
+    }
+    try {
+        const db = getDb();
+        db.prepare(
+            'INSERT INTO procedure_requests (user_id, user_email, procedure_name, details) VALUES (?, ?, ?, ?)'
+        ).run(
+            req.user?.id || null,
+            req.user?.email || 'anonymous',
+            procedureName.trim(),
+            (details || '').trim() || null
+        );
+        res.json({ success: true, message: 'Request submitted! We\'ll review it soon.' });
+    } catch (err) {
+        console.error('Procedure request error:', err);
+        res.status(500).json({ error: 'Failed to submit request' });
+    }
+});
+
 // Root — serve landing page
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));

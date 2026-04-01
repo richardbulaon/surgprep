@@ -44,6 +44,19 @@ function initTables() {
     } catch (e) {
         // Column already exists — ignore
     }
+
+    // Procedure request table
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS procedure_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT,
+            user_email TEXT,
+            procedure_name TEXT NOT NULL,
+            details TEXT,
+            created_at TEXT DEFAULT (datetime('now')),
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        );
+    `);
 }
 
 module.exports = { getDb };

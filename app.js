@@ -2606,6 +2606,74 @@ const procedures = [
 // ===== APP STATE =====
 let currentFilter = 'all';
 let currentSearch = '';
+let checklistMode = false;
+let currentProcedureId = null;
+
+// ===== FAVORITES =====
+function getFavorites() {
+    try { return JSON.parse(localStorage.getItem('surgprep_favorites') || '[]'); } catch { return []; }
+}
+function setFavorites(favs) { localStorage.setItem('surgprep_favorites', JSON.stringify(favs)); }
+function isFavorite(id) { return getFavorites().includes(id); }
+function toggleFavorite(id, e) {
+    if (e) { e.stopPropagation(); e.preventDefault(); }
+    const favs = getFavorites();
+    const idx = favs.indexOf(id);
+    if (idx > -1) favs.splice(idx, 1); else favs.push(id);
+    setFavorites(favs);
+    renderList();
+    renderFavoritesSection();
+    updateFavoritesFilterVisibility();
+}
+
+// ===== RECENTLY VIEWED =====
+function getRecentlyViewed() {
+    try { return JSON.parse(localStorage.getItem('surgprep_recent') || '[]'); } catch { return []; }
+}
+function addRecentlyViewed(id) {
+    let recent = getRecentlyViewed().filter(r => r !== id);
+    recent.unshift(id);
+    if (recent.length > 5) recent = recent.slice(0, 5);
+    localStorage.setItem('surgprep_recent', JSON.stringify(recent));
+}
+
+// ===== CHECKLIST STORAGE =====
+function getChecklist(procId) {
+    try { return JSON.parse(localStorage.getItem('surgprep_checklist_' + procId) || '{}'); } catch { return {}; }
+}
+function setChecklist(procId, data) { localStorage.setItem('surgprep_checklist_' + procId, JSON.stringify(data)); }
+function resetChecklist(procId) { localStorage.removeItem('surgprep_checklist_' + procId); }
+
+// ===== FUZZY SEARCH =====
+function fuzzyMatch(text, query) {
+    if (!text || !query) return false;
+    const t = text.toLowerCase();
+    const q = query.toLowerCase();
+    // Direct substring
+    if (t.includes(q)) return true;
+    // Split query into words — all must appear somewhere
+    const words = q.split(/\s+/).filter(w => w.length > 0);
+    return words.every(w => t.includes(w));
+}
+
+function searchProcedure(p, query) {
+    if (!query) return { matches: true, matchedIn: [] };
+    const q = query.toLowerCase();
+    const matchedIn = [];
+
+    if (fuzzyMatch(p.name, q)) matchedIn.push('Name');
+    if (fuzzyMatch(p.overview, q)) matchedIn.push('Overview');
+    if (p.instruments && p.instruments.some(i => fuzzyMatch(i, q))) matchedIn.push('Instruments');
+    if (p.supplies && p.supplies.some(s => fuzzyMatch(s, q))) matchedIn.push('Supplies');
+    if (p.surgeonPrefs && p.surgeonPrefs.some(sp => fuzzyMatch(sp.name, q) || (sp.prefs && sp.prefs.some(pr => fuzzyMatch(pr, q))))) matchedIn.push('Surgeon Prefs');
+    if (p.tips && p.tips.some(t => fuzzyMatch(t, q))) matchedIn.push('Tips');
+    if (p.anatomy && p.anatomy.some(a => fuzzyMatch(a, q))) matchedIn.push('Anatomy');
+    if (p.steps && p.steps.some(s => fuzzyMatch(s, q))) matchedIn.push('Steps');
+    if (fuzzyMatch(p.positioning, q)) matchedIn.push('Positioning');
+    if (fuzzyMatch(p.anesthesia, q)) matchedIn.push('Anesthesia');
+
+    return { matches: matchedIn.length > 0, matchedIn };
+}
 
 // ===== DOM ELEMENTS =====
 const searchInput = document.getElementById('searchInput');
@@ -2615,15 +2683,99 @@ const procedureDetail = document.getElementById('procedureDetail');
 const procedureContent = document.getElementById('procedureContent');
 const backBtn = document.getElementById('backBtn');
 
+// ===== PROCEDURE COUNT FOR FILTERS =====
+function getFilterCounts(searchQuery) {
+    const counts = { all: 0 };
+    procedures.forEach(p => {
+        if (p.comingSoon) return;
+        const searchResult = searchProcedure(p, searchQuery);
+        if (searchQuery && !searchResult.matches) return;
+        counts.all = (counts.all || 0) + 1;
+        counts[p.specialty] = (counts[p.specialty] || 0) + 1;
+    });
+    // Favorites count
+    const favs = getFavorites();
+    counts.favorites = procedures.filter(p => !p.comingSoon && favs.includes(p.id) && (!searchQuery || searchProcedure(p, searchQuery).matches)).length;
+    return counts;
+}
+
+function updateFilterBadges() {
+    const counts = getFilterCounts(currentSearch);
+    document.querySelectorAll('.filter-tag').forEach(tag => {
+        const filter = tag.dataset.filter;
+        const count = counts[filter] || 0;
+        const label = filter === 'all' ? 'All' : filter === 'favorites' ? '⭐ Favorites' : filter;
+        tag.textContent = `${label} (${count})`;
+    });
+}
+
+function updateFavoritesFilterVisibility() {
+    const favFilter = document.getElementById('favoritesFilter');
+    if (favFilter) {
+        favFilter.style.display = getFavorites().length > 0 ? 'inline-block' : 'none';
+    }
+}
+
+// ===== RENDER RECENTLY VIEWED =====
+function renderRecentlyViewed() {
+    const section = document.getElementById('recentlyViewedSection');
+    const scroll = document.getElementById('recentlyViewedScroll');
+    if (!section || !scroll) return;
+    const recent = getRecentlyViewed();
+    const recentProcs = recent.map(id => procedures.find(p => p.id === id)).filter(Boolean).filter(p => !p.comingSoon);
+    if (recentProcs.length === 0 || currentFilter !== 'all' || currentSearch) {
+        section.style.display = 'none';
+        return;
+    }
+    section.style.display = 'block';
+    scroll.innerHTML = recentProcs.map(p => `
+        <div class="recent-card" onclick="showDetail('${p.id}')">
+            <span class="recent-badge ${p.specialty.toLowerCase()}">${p.specialty}</span>
+            <p class="recent-name">${p.name}</p>
+        </div>
+    `).join('');
+}
+
+// ===== RENDER FAVORITES SECTION =====
+function renderFavoritesSection() {
+    const section = document.getElementById('favoritesSection');
+    const scroll = document.getElementById('favoritesScroll');
+    if (!section || !scroll) return;
+    const favs = getFavorites();
+    const favProcs = favs.map(id => procedures.find(p => p.id === id)).filter(Boolean).filter(p => !p.comingSoon);
+    if (favProcs.length === 0 || currentFilter === 'favorites' || currentSearch) {
+        section.style.display = 'none';
+        return;
+    }
+    section.style.display = 'block';
+    scroll.innerHTML = favProcs.map(p => `
+        <div class="recent-card" onclick="showDetail('${p.id}')">
+            <span class="recent-badge ${p.specialty.toLowerCase()}">${p.specialty}</span>
+            <p class="recent-name">${p.name}</p>
+            <span class="recent-fav">⭐</span>
+        </div>
+    `).join('');
+}
+
 // ===== RENDER PROCEDURE LIST =====
 function renderList() {
+    const favs = getFavorites();
     const filtered = procedures.filter(p => {
-        const matchesFilter = currentFilter === 'all' || p.specialty === currentFilter;
-        const matchesSearch = currentSearch === '' || 
-            p.name.toLowerCase().includes(currentSearch.toLowerCase()) ||
-            p.overview.toLowerCase().includes(currentSearch.toLowerCase());
-        return matchesFilter && matchesSearch;
+        // Filter
+        if (currentFilter === 'favorites') {
+            if (!favs.includes(p.id)) return false;
+        } else if (currentFilter !== 'all' && p.specialty !== currentFilter) {
+            return false;
+        }
+        // Search
+        if (currentSearch) {
+            return searchProcedure(p, currentSearch).matches;
+        }
+        return true;
     });
+
+    // Get search match info for display
+    const searchResults = currentSearch ? filtered.map(p => ({ proc: p, ...searchProcedure(p, currentSearch) })) : filtered.map(p => ({ proc: p, matchedIn: [] }));
 
     if (filtered.length === 0) {
         procedureList.innerHTML = `
@@ -2632,24 +2784,35 @@ function renderList() {
                 <p>No procedures found. Try a different search or filter.</p>
             </div>
         `;
-        return;
+    } else {
+        procedureList.innerHTML = searchResults.map((r, i) => {
+            const p = r.proc;
+            const favClass = isFavorite(p.id) ? 'fav-active' : '';
+            return `
+            <div class="procedure-card" data-id="${p.id}" style="animation-delay: ${i * 0.05}s" ${p.comingSoon ? '' : 'onclick="showDetail(\'' + p.id + '\')"'}>
+                <div class="card-header">
+                    <h3>${p.name}</h3>
+                    <div class="card-header-right">
+                        ${!p.comingSoon ? `<button class="fav-btn ${favClass}" onclick="toggleFavorite('${p.id}', event)" title="Toggle favorite">★</button>` : ''}
+                        <span class="specialty-badge ${p.comingSoon ? 'coming-soon' : p.specialty.toLowerCase()}">${p.specialty}</span>
+                    </div>
+                </div>
+                <p class="card-desc">${p.overview}</p>
+                ${r.matchedIn.length > 0 && currentSearch ? `<p class="card-match-label">Found in: ${r.matchedIn.join(', ')}</p>` : ''}
+                ${!p.comingSoon ? `
+                <div class="card-meta">
+                    <span class="meta-item">⏱ <span>${p.duration}</span></span>
+                    <span class="meta-item">📊 <span>${p.complexity}</span></span>
+                </div>` : ''}
+                ${p.comingSoon ? '<div class="coming-soon-overlay"><span class="coming-soon-label">🔒 Coming Soon</span></div>' : ''}
+            </div>`;
+        }).join('');
     }
 
-    procedureList.innerHTML = filtered.map((p, i) => `
-        <div class="procedure-card" data-id="${p.id}" style="animation-delay: ${i * 0.05}s" ${p.comingSoon ? '' : 'onclick="showDetail(\'' + p.id + '\')"'}>
-            <div class="card-header">
-                <h3>${p.name}</h3>
-                <span class="specialty-badge ${p.comingSoon ? 'coming-soon' : p.specialty.toLowerCase()}">${p.specialty}</span>
-            </div>
-            <p class="card-desc">${p.overview}</p>
-            ${!p.comingSoon ? `
-            <div class="card-meta">
-                <span class="meta-item">⏱ <span>${p.duration}</span></span>
-                <span class="meta-item">📊 <span>${p.complexity}</span></span>
-            </div>` : ''}
-            ${p.comingSoon ? '<div class="coming-soon-overlay"><span class="coming-soon-label">🔒 Coming Soon</span></div>' : ''}
-        </div>
-    `).join('');
+    updateFilterBadges();
+    renderRecentlyViewed();
+    renderFavoritesSection();
+    updateFavoritesFilterVisibility();
 }
 
 // ===== RENDER PROCEDURE DETAIL =====
@@ -2657,10 +2820,55 @@ function showDetail(id) {
     const p = procedures.find(proc => proc.id === id);
     if (!p || p.comingSoon) return;
 
+    currentProcedureId = id;
+    checklistMode = false;
+    addRecentlyViewed(id);
+
+    // Hide list, show detail
     procedureList.style.display = 'none';
     document.querySelector('.search-section').style.display = 'none';
+    const recentSection = document.getElementById('recentlyViewedSection');
+    const favSection = document.getElementById('favoritesSection');
+    if (recentSection) recentSection.style.display = 'none';
+    if (favSection) favSection.style.display = 'none';
     procedureDetail.style.display = 'block';
     window.scrollTo(0, 0);
+
+    // Reset checklist button
+    const clBtn = document.getElementById('checklistToggleBtn');
+    if (clBtn) clBtn.classList.remove('active');
+
+    renderDetailContent(p);
+}
+
+function renderDetailContent(p) {
+    const makeList = (items, sectionKey) => {
+        if (!checklistMode) return `<ul>${items.map(i => `<li>${i}</li>`).join('')}</ul>`;
+        const cl = getChecklist(p.id);
+        return `<div class="checklist-items">${items.map((item, idx) => {
+            const key = sectionKey + '_' + idx;
+            const checked = cl[key] ? 'checked' : '';
+            return `<div class="checklist-item ${checked}">
+                <input type="checkbox" id="cl_${key}" ${checked} onchange="handleChecklistChange('${p.id}', '${key}', this.checked)">
+                <label for="cl_${key}">${item}</label>
+            </div>`;
+        }).join('')}</div>`;
+    };
+
+    // Checklist progress bar
+    let checklistHtml = '';
+    if (checklistMode) {
+        const cl = getChecklist(p.id);
+        const totalItems = (p.instruments?.length || 0) + (p.supplies?.length || 0) + (p.implants?.length || 0);
+        const checkedItems = Object.values(cl).filter(Boolean).length;
+        const pct = totalItems > 0 ? Math.round((checkedItems / totalItems) * 100) : 0;
+        checklistHtml = `
+            <div class="checklist-progress">
+                <div class="checklist-bar"><div class="checklist-bar-fill" style="width: ${pct}%"></div></div>
+                <span class="checklist-text">${checkedItems}/${totalItems} (${pct}%)</span>
+                <button class="checklist-reset-btn" onclick="handleChecklistReset('${p.id}')">Reset</button>
+            </div>`;
+    }
 
     procedureContent.innerHTML = `
         <div class="detail-header">
@@ -2672,19 +2880,19 @@ function showDetail(id) {
             </div>
             <p class="overview">${p.overview}</p>
         </div>
-
+        ${checklistHtml}
         ${makeSection('🛏️ Patient Positioning', `<p>${p.positioning}</p>`)}
         ${makeSection('💉 Anesthesia', `<p>${p.anesthesia}</p>`)}
         ${makeSection('🫀 Key Anatomy', `<ul>${p.anatomy.map(a => `<li>${a}</li>`).join('')}</ul>`)}
-        ${makeSection('🔧 Instruments & Trays', `<ul>${p.instruments.map(i => `<li>${i}</li>`).join('')}</ul>`)}
-        ${makeSection('📦 Supplies & Equipment', `<ul>${p.supplies.map(s => `<li>${s}</li>`).join('')}</ul>`)}
-        ${p.implants && p.implants.length > 0 ? makeSection('🦴 Implants', `<ul>${p.implants.map(i => `<li>${i}</li>`).join('')}</ul>`) : ''}
+        ${makeSection('🔧 Instruments & Trays', makeList(p.instruments, 'inst'), checklistMode)}
+        ${makeSection('📦 Supplies & Equipment', makeList(p.supplies, 'sup'), checklistMode)}
+        ${p.implants && p.implants.length > 0 ? makeSection('🦴 Implants', makeList(p.implants, 'imp'), checklistMode) : ''}
         ${makeSection('📋 Step-by-Step Surgical Flow', `<ol>${p.steps.map(s => `<li>${s}</li>`).join('')}</ol>`, true)}
         ${makeSection('💡 Scrub Tech Tips', `<div class="tip-box"><ul>${p.tips.map(t => `<li>${t}</li>`).join('')}</ul></div>`, true)}
         ${makeSection('⚠️ Common Complications', `<div class="warning-box"><ul>${p.complications.map(c => `<li>${c}</li>`).join('')}</ul></div>`)}
         ${p.variations && p.variations.length > 0 ? makeSection('🔀 Variations', `<ul>${p.variations.map(v => `<li>${v}</li>`).join('')}</ul>`) : ''}
         ${p.surgeonPrefs && p.surgeonPrefs.length > 0 ? makeSection('👨‍⚕️ Surgeon Preferences', `<div class="surgeon-prefs">${p.surgeonPrefs.map(s => `<div class="surgeon-card"><h5>${s.name}</h5><ul>${s.prefs.map(pr => `<li>${pr}</li>`).join('')}</ul></div>`).join('')}</div>`) : ''}
-        ${p.images && p.images.length > 0 ? makeSection('📸 OR Photos', `<div class="image-gallery">${p.images.map(img => `<div class="gallery-item"><img src="${img.src}" alt="${img.caption}" loading="lazy" onclick="this.classList.toggle('expanded')"><p class="img-caption">${img.caption}</p></div>`).join('')}</div>`) : ''}
+        ${p.images && p.images.length > 0 ? makeSection('📸 OR Photos', `<div class="image-gallery">${p.images.map((img, idx) => `<div class="gallery-item"><img src="${img.src}" alt="${img.caption}" loading="lazy" onclick="openLightbox('${p.id}', ${idx})"><p class="img-caption">${img.caption}</p></div>`).join('')}</div>`) : ''}
     `;
 
     // Add click handlers to section headers
@@ -2710,11 +2918,142 @@ function makeSection(title, content, openByDefault = false) {
     `;
 }
 
+// ===== CHECKLIST HANDLERS =====
+function handleChecklistChange(procId, key, checked) {
+    const cl = getChecklist(procId);
+    cl[key] = checked;
+    setChecklist(procId, cl);
+    // Re-render to update progress bar
+    const p = procedures.find(pr => pr.id === procId);
+    if (p) renderDetailContent(p);
+}
+
+function handleChecklistReset(procId) {
+    resetChecklist(procId);
+    const p = procedures.find(pr => pr.id === procId);
+    if (p) renderDetailContent(p);
+}
+
+// ===== LIGHTBOX =====
+let lightboxImages = [];
+let lightboxIndex = 0;
+
+function openLightbox(procId, index) {
+    const p = procedures.find(pr => pr.id === procId);
+    if (!p || !p.images) return;
+    lightboxImages = p.images;
+    lightboxIndex = index;
+    updateLightbox();
+    document.getElementById('lightboxOverlay').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function updateLightbox() {
+    const img = lightboxImages[lightboxIndex];
+    if (!img) return;
+    document.getElementById('lightboxImg').src = img.src;
+    document.getElementById('lightboxImg').alt = img.caption;
+    document.getElementById('lightboxCaption').textContent = img.caption;
+    document.getElementById('lightboxPrev').style.display = lightboxIndex > 0 ? 'block' : 'none';
+    document.getElementById('lightboxNext').style.display = lightboxIndex < lightboxImages.length - 1 ? 'block' : 'none';
+}
+
+function closeLightbox() {
+    document.getElementById('lightboxOverlay').style.display = 'none';
+    document.body.style.overflow = '';
+}
+
+// ===== QUIZ / STUDY MODE =====
+let quizCorrect = 0;
+let quizTotal = 0;
+let quizFlipped = false;
+
+function generateQuizCard() {
+    // Only use non-comingSoon procedures
+    const available = procedures.filter(p => !p.comingSoon);
+    if (available.length === 0) return;
+
+    const p = available[Math.floor(Math.random() * available.length)];
+    const questionTypes = [];
+
+    if (p.instruments && p.instruments.length > 0) questionTypes.push('instruments');
+    if (p.supplies && p.supplies.length > 0) questionTypes.push('supplies');
+    if (p.tips && p.tips.length > 0) questionTypes.push('tips');
+    if (p.positioning) questionTypes.push('positioning');
+    if (p.anesthesia) questionTypes.push('anesthesia');
+
+    if (questionTypes.length === 0) return generateQuizCard(); // retry
+
+    const type = questionTypes[Math.floor(Math.random() * questionTypes.length)];
+    let question, answer, category;
+
+    switch (type) {
+        case 'instruments':
+            category = p.specialty + ' · Instruments';
+            question = `What instruments/trays do you need for a ${p.name}?`;
+            answer = `<ul>${p.instruments.slice(0, 8).map(i => `<li>${i}</li>`).join('')}${p.instruments.length > 8 ? `<li><em>...and ${p.instruments.length - 8} more</em></li>` : ''}</ul>`;
+            break;
+        case 'supplies':
+            category = p.specialty + ' · Supplies';
+            question = `What supplies/equipment are needed for a ${p.name}?`;
+            answer = `<ul>${p.supplies.slice(0, 8).map(s => `<li>${s}</li>`).join('')}${p.supplies.length > 8 ? `<li><em>...and ${p.supplies.length - 8} more</em></li>` : ''}</ul>`;
+            break;
+        case 'tips':
+            category = p.specialty + ' · Tips';
+            question = `What's a key scrub tech tip for ${p.name}?`;
+            answer = `<ul>${p.tips.slice(0, 3).map(t => `<li>${t}</li>`).join('')}</ul>`;
+            break;
+        case 'positioning':
+            category = p.specialty + ' · Positioning';
+            question = `What is the patient positioning for ${p.name}?`;
+            answer = `<p>${p.positioning}</p>`;
+            break;
+        case 'anesthesia':
+            category = p.specialty + ' · Anesthesia';
+            question = `What type of anesthesia is used for ${p.name}?`;
+            answer = `<p>${p.anesthesia}</p>`;
+            break;
+    }
+
+    document.getElementById('quizCategory').textContent = category;
+    document.getElementById('quizQuestion').textContent = question;
+    document.getElementById('quizAnswer').innerHTML = answer;
+
+    // Reset flip
+    quizFlipped = false;
+    document.getElementById('quizCard').classList.remove('flipped');
+}
+
+function showQuiz() {
+    procedureList.style.display = 'none';
+    document.querySelector('.search-section').style.display = 'none';
+    const recentSection = document.getElementById('recentlyViewedSection');
+    const favSection = document.getElementById('favoritesSection');
+    if (recentSection) recentSection.style.display = 'none';
+    if (favSection) favSection.style.display = 'none';
+    document.getElementById('quizSection').style.display = 'block';
+    quizCorrect = 0;
+    quizTotal = 0;
+    document.getElementById('quizCorrect').textContent = '0';
+    document.getElementById('quizTotal').textContent = '0';
+    generateQuizCard();
+    window.scrollTo(0, 0);
+}
+
+function hideQuiz() {
+    document.getElementById('quizSection').style.display = 'none';
+    document.querySelector('.search-section').style.display = 'block';
+    procedureList.style.display = 'flex';
+    renderList();
+    window.scrollTo(0, 0);
+}
+
 // ===== BACK BUTTON =====
 backBtn.addEventListener('click', () => {
     procedureDetail.style.display = 'none';
     document.querySelector('.search-section').style.display = 'block';
     procedureList.style.display = 'flex';
+    renderList();
     window.scrollTo(0, 0);
 });
 
@@ -2733,6 +3072,137 @@ filterTags.addEventListener('click', (e) => {
         renderList();
     }
 });
+
+// ===== CHECKLIST TOGGLE =====
+document.getElementById('checklistToggleBtn')?.addEventListener('click', () => {
+    checklistMode = !checklistMode;
+    const btn = document.getElementById('checklistToggleBtn');
+    btn.classList.toggle('active', checklistMode);
+    const p = procedures.find(pr => pr.id === currentProcedureId);
+    if (p) renderDetailContent(p);
+});
+
+// ===== PRINT BUTTON =====
+document.getElementById('printBtn')?.addEventListener('click', () => {
+    window.print();
+});
+
+// ===== STUDY MODE BUTTON =====
+document.getElementById('studyModeBtn')?.addEventListener('click', showQuiz);
+
+// ===== QUIZ BACK BUTTON =====
+document.getElementById('quizBackBtn')?.addEventListener('click', hideQuiz);
+
+// ===== QUIZ CARD FLIP =====
+document.getElementById('quizCard')?.addEventListener('click', () => {
+    quizFlipped = !quizFlipped;
+    document.getElementById('quizCard').classList.toggle('flipped', quizFlipped);
+});
+
+// ===== QUIZ SCORING =====
+document.getElementById('quizRightBtn')?.addEventListener('click', () => {
+    quizCorrect++;
+    quizTotal++;
+    document.getElementById('quizCorrect').textContent = quizCorrect;
+    document.getElementById('quizTotal').textContent = quizTotal;
+    generateQuizCard();
+});
+document.getElementById('quizWrongBtn')?.addEventListener('click', () => {
+    quizTotal++;
+    document.getElementById('quizTotal').textContent = quizTotal;
+    generateQuizCard();
+});
+document.getElementById('quizNextBtn')?.addEventListener('click', generateQuizCard);
+
+// ===== LIGHTBOX HANDLERS =====
+document.getElementById('lightboxClose')?.addEventListener('click', closeLightbox);
+document.getElementById('lightboxPrev')?.addEventListener('click', () => {
+    if (lightboxIndex > 0) { lightboxIndex--; updateLightbox(); }
+});
+document.getElementById('lightboxNext')?.addEventListener('click', () => {
+    if (lightboxIndex < lightboxImages.length - 1) { lightboxIndex++; updateLightbox(); }
+});
+document.getElementById('lightboxOverlay')?.addEventListener('click', (e) => {
+    if (e.target.id === 'lightboxOverlay') closeLightbox();
+});
+// Keyboard navigation for lightbox
+document.addEventListener('keydown', (e) => {
+    const lb = document.getElementById('lightboxOverlay');
+    if (lb && lb.style.display !== 'none') {
+        if (e.key === 'Escape') closeLightbox();
+        if (e.key === 'ArrowLeft' && lightboxIndex > 0) { lightboxIndex--; updateLightbox(); }
+        if (e.key === 'ArrowRight' && lightboxIndex < lightboxImages.length - 1) { lightboxIndex++; updateLightbox(); }
+    }
+});
+
+// ===== REQUEST PROCEDURE MODAL =====
+document.getElementById('requestProcedureBtn')?.addEventListener('click', () => {
+    document.getElementById('requestModal').style.display = 'flex';
+    document.getElementById('requestProcedureName').value = '';
+    document.getElementById('requestProcedureDetails').value = '';
+    const msg = document.getElementById('requestMessage');
+    msg.style.display = 'none';
+    msg.className = 'modal-message';
+});
+document.getElementById('requestModalClose')?.addEventListener('click', () => {
+    document.getElementById('requestModal').style.display = 'none';
+});
+document.getElementById('requestModal')?.addEventListener('click', (e) => {
+    if (e.target.id === 'requestModal') document.getElementById('requestModal').style.display = 'none';
+});
+document.getElementById('requestSubmitBtn')?.addEventListener('click', async () => {
+    const name = document.getElementById('requestProcedureName').value.trim();
+    const details = document.getElementById('requestProcedureDetails').value.trim();
+    const msg = document.getElementById('requestMessage');
+
+    if (!name) {
+        msg.textContent = 'Please enter a procedure name.';
+        msg.className = 'modal-message error';
+        msg.style.display = 'block';
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/request-procedure', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ procedureName: name, details })
+        });
+        const data = await res.json();
+        if (data.success) {
+            msg.textContent = '✅ ' + data.message;
+            msg.className = 'modal-message success';
+            msg.style.display = 'block';
+            document.getElementById('requestProcedureName').value = '';
+            document.getElementById('requestProcedureDetails').value = '';
+            setTimeout(() => { document.getElementById('requestModal').style.display = 'none'; }, 2000);
+        } else {
+            msg.textContent = data.error || 'Something went wrong';
+            msg.className = 'modal-message error';
+            msg.style.display = 'block';
+        }
+    } catch (err) {
+        msg.textContent = 'Network error — please try again.';
+        msg.className = 'modal-message error';
+        msg.style.display = 'block';
+    }
+});
+
+// ===== SWIPE SUPPORT FOR LIGHTBOX =====
+(function() {
+    let touchStartX = 0;
+    const overlay = document.getElementById('lightboxOverlay');
+    if (!overlay) return;
+    overlay.addEventListener('touchstart', (e) => { touchStartX = e.changedTouches[0].screenX; }, { passive: true });
+    overlay.addEventListener('touchend', (e) => {
+        const diff = e.changedTouches[0].screenX - touchStartX;
+        if (Math.abs(diff) > 50) {
+            if (diff > 0 && lightboxIndex > 0) { lightboxIndex--; updateLightbox(); }
+            if (diff < 0 && lightboxIndex < lightboxImages.length - 1) { lightboxIndex++; updateLightbox(); }
+        }
+    }, { passive: true });
+})();
 
 // ===== INIT =====
 renderList();
